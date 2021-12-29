@@ -1,0 +1,115 @@
+from mttkinter import  mtTkinter as tk
+from tkinter import ttk
+from tkinter import messagebox
+import nsepy
+import pandas as pd
+import traceback
+
+from datetime import datetime, timedelta
+import gui1
+
+# Creating Root Window
+root = tk.Tk()
+root.title("Stock Price Prediction")
+root.iconbitmap(r'C:\Users\Hardey\Desktop\unnamed.ico')
+root.geometry("300x300")
+
+# Company List
+company_list = pd.read_csv('ind_nifty100list.csv')
+company_nam_list = []
+company_sym_list = []
+for company_name in company_list['Company'].values:
+    company_nam_list.append(company_name)
+for company_symbol in company_list['Symbol'].values:
+    company_sym_list.append(company_symbol)
+
+# Additional form components
+labela = tk.Label(root,
+                  text='Select Company, the data will be collected\nfrom last 1000 days,'
+                  , fg='red', justify='left')
+labela.grid(row=1, sticky='w')
+
+label1 = tk.Label(root, text='Select Company')
+label1.grid(row=2, column=0, sticky='w')
+
+combo1 = ttk.Combobox(root, state='readonly',
+                      values=company_nam_list)
+combo1.current(1)
+combo1.grid(row=2, column=0, pady=10, sticky='e')
+data = pd.DataFrame
+
+def e1():
+    try:
+        global data
+        cur_index = combo1.current()
+        x = datetime.now() - timedelta(days=1999)
+        data = nsepy.get_history(symbol=company_sym_list.__getitem__(cur_index),
+                                 start=x.date(), end=datetime.now().date())
+        selected_company = company_sym_list.__getitem__(cur_index)
+        selected_index = cur_index
+        gui1.predict(data, root, selected_company, selected_index)
+
+    except Exception:
+        messagebox.showinfo("Falied to Connect", "Please Connect your device to World Wide Web.")
+        traceback.print_exc()
+
+def treeview_sort_column(tv, col, reverse):
+    l = [(tv.set(k, col), k) for k in tv.get_children('')]
+    l.sort(reverse=reverse)
+
+    # rearrange items in sorted positions
+    for index, (val, k) in enumerate(l):
+        tv.move(k, '', index)
+
+    # reverse sort next time
+    tv.heading(col, command=lambda:
+               treeview_sort_column(tv, col, not reverse))
+
+def e2():
+    rt = tk.Tk()
+    rt.title('Technical Analysis')
+    tree = ttk.Treeview(rt, columns=('size', 'modified', 'jjj'))
+    tree.column('size', width=100, anchor='center')
+    tree.heading('size', text='Size', command=lambda c='size': treeview_sort_column(tree, c, False))
+    tree.heading('modified', text='Modified', command=lambda c='modified': treeview_sort_column(tree, c, False))
+    tree.heading('jjj', text='jjj', command=lambda c='jjj': treeview_sort_column(tree, c, False))
+    cur_index = combo1.current()
+    x = datetime.now() - timedelta(days=1999)
+    data = nsepy.get_history(symbol=company_sym_list.__getitem__(cur_index),
+                             start=x.date(), end=datetime.now().date() + timedelta(days=52))
+    for companyname in company_nam_list:
+        tree.insert('', 'end' , text= companyname, values=(2,4,6))
+    tree.pack()
+    rt.mainloop()
+
+def e3():
+    rt = tk.Tk()
+    rt.title('Sentimental Analysis')
+    rt.mainloop()
+
+    tree = ttk.Treeview(rt, columns=('Positive', 'Negative', 'Total Sentiment'))
+    tree.heading('Positive', text='Positive', command=lambda c='Positive': treeview_sort_column(tree, c, False))
+    tree.heading('Negative', text='Negative', command=lambda c='Negative': treeview_sort_column(tree, c, False))
+    tree.heading('Total Sentiment', text='Total Sentiment', command=lambda c='Total Sentiment': treeview_sort_column(tree, c, False))
+
+    import senti_ana
+    i=0
+    for companyname in company_nam_list:
+        pos, neg = senti_ana.sentiment(i)
+        print(pos)
+        print(neg)
+        tree.insert('', 'end' , text= companyname, values=(pos,neg,pos-neg))
+        i = i + 1
+
+    tree.pack()
+
+btn1 = tk.Button(root, text='Get Historical Data from web', command=e1)
+btn1.grid(row=3, column=0, sticky='w')
+
+btn2 = tk.Button(root, text='Technical Analysis', command=e2)
+btn2.grid(row=5, column=0, sticky='w')
+
+btn3 = tk.Button(root, text='Sentimental Analysis', command=e3)
+btn3.grid(row=7, column=0, sticky='w')
+
+root.mainloop()
